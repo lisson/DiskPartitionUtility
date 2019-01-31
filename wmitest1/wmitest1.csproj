@@ -73,5 +73,11 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DiskUtility\DiskUtility.csproj">
+      <Project>{ecd8456b-852b-4d16-a120-cd44352c1755}</Project>
+      <Name>DiskUtility</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

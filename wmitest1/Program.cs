@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Management.Infrastructure;
 using System.Text.RegularExpressions;
+using DiskPartitionUtility;
 
 
 
@@ -14,43 +15,25 @@ namespace wmitest1
     {
         static void Main(string[] args)
         {
-            CimSession cimSession = CimSession.Create("localhost");
-            IEnumerable<CimInstance> queryInstances = cimSession.QueryInstances(@"root\cimv2",
-                            "WQL",
-                            @"select DeviceID, Model, Size from win32_DiskDrive Where DeviceID like '%PHYSICALDRIVE3'");
-
-            string disk="";
-
-            foreach (CimInstance cimInstance in queryInstances)
+            Utility util = new Utility();
+            DiskDrive[] disks = util.GetAllDiskPartitions();
+            foreach(DiskDrive d in disks)
             {
-             
-                Console.WriteLine("DeviceID name: {0}", cimInstance.CimInstanceProperties["DeviceID"].Value);
-                disk = cimInstance.CimInstanceProperties["DeviceID"].Value.ToString();
-                Console.WriteLine("Model name: {0}", cimInstance.CimInstanceProperties["Model"].Value);
-            }
-            
-            string query = String.Format("ASSOCIATORS OF {{Win32_DiskDrive.DeviceID=\"{0}\"}} WHERE AssocClass=Win32_DiskDriveToDiskPartition", disk.Replace(@"\", @"\\"));
-            Console.Out.WriteLine(query);
-            IEnumerable<CimInstance> partitionmap = cimSession.QueryInstances(@"root\cimv2",
-                            "WQL",
-                            query);
-            string query2;
-            IEnumerable<CimInstance> vols;
-            foreach (CimInstance p in partitionmap)
-            {
-                Console.WriteLine("DeviceID: {0}", p.CimInstanceProperties["DeviceID"].Value);
-                query2 = String.Format("ASSOCIATORS OF {{Win32_DiskPartition.DeviceID=\"{0}\"}} WHERE AssocClass=Win32_LogicalDiskToPartition", p.CimInstanceProperties["DeviceID"].Value);
-                vols = cimSession.QueryInstances(@"root\cimv2", "WQL", query2);
-                foreach (CimInstance v in vols)
+                Console.Out.WriteLine("Disk #{0}", d.Index);
+                if(d.Partitions == null)
                 {
-                    Console.WriteLine("Name: {0}", v.CimInstanceProperties["Name"].Value);
-                    Console.WriteLine("Size: {0}", v.CimInstanceProperties["Size"].Value);
-                    // "System Reserved" and "EFI" are windows partitions. Leave them alone
-                    Console.WriteLine("Size: {0}", v.CimInstanceProperties["VolumeName"].Value);
+                    continue;
+                }
+                foreach (DiskPartition p in d.Partitions)
+                {
+                    Console.Out.WriteLine("Partition #{0}, Size {1}", p.Index, p.Size);
+                    if(p.Volume == null)
+                    {
+                        continue;
+                    }
+                    Console.Out.WriteLine("{0}, {1}, {2}", p.Volume.Letter, p.Volume.Label, p.Volume.FileSystem);
                 }
             }
-
-            
 
             Console.ReadLine();
         }
