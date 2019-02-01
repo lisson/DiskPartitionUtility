@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Management.Infrastructure;
+using System.Diagnostics;
 
 
 namespace DiskPartitionUtility
@@ -61,6 +62,58 @@ namespace DiskPartitionUtility
             return new DiskVolume(v.CimInstanceProperties["Name"].Value.ToString(),
                 v.CimInstanceProperties["VolumeName"].Value.ToString(),
                 v.CimInstanceProperties["FileSystem"].Value.ToString());
+        }
+
+        public string DiskPart(string[] commands, bool safety=true)
+        {
+            if (commands.Length > 20)
+            {
+                // You should probably break up the commands
+                return null;
+            }
+            //If safety on, commands containing format and clean will not be executed
+            if (safety)
+            {
+                foreach (string s in commands)
+                {
+                    if (s.ToLower().Contains("format") || s.ToLower().Contains("clean"))
+                    {
+                        return null;
+                    }
+                }
+            }
+            Process p = new Process();                                    // new instance of Process class
+            p.StartInfo.UseShellExecute = false;                          // do not start a new shell
+            p.StartInfo.RedirectStandardOutput = true;                    // Redirects the on screen results
+            p.StartInfo.FileName = @"C:\Windows\System32\diskpart.exe";   // executable to run
+            p.StartInfo.RedirectStandardInput = true;                     // Redirects the input commands
+            p.Start();                                                    // Starts the process
+            foreach (string c in commands)
+            {
+                p.StandardInput.WriteLine(c);                   // Issues commands to diskpart
+            }
+            if (commands.Last().ToLower().CompareTo("exit") != 0)
+            {
+                p.StandardInput.WriteLine("exit");
+            }
+            string output = p.StandardOutput.ReadToEnd();                 // Places the output to a variable
+            p.WaitForExit();                                              // Waits for the exe to finish
+
+            return output;
+        }
+
+        // Wipes the drive, creates a single bootable MBR partition
+        // Please be careful
+        public string FormatDisk(int index)
+        {
+            List<string> commands = new List<string>();
+            commands.Add(String.Format("select disk {0}", index));
+            commands.Add("clean");
+            commands.Add("create partition primary");
+            commands.Add("active");
+            commands.Add("format fs=ntfs quick");
+            commands.Add("assign");
+            return DiskPart(commands.ToArray(), false);
         }
     }
 
